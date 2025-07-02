@@ -1,0 +1,13 @@
+soundfile
+tqdm
+pandas
+pydub
+scikit-learn
+webrtcvad
+scipy
+inflect
+numpy
+unidecode
+vtt_to_srt3
+youtube-transcript-api
+yt-dlp
