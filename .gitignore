@@ -1,5 +1,4 @@
 env/
 __pycache__/
 *.pyc
-indotts_prep/
-indotts/
+output/

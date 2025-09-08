@@ -101,23 +101,13 @@ def romanize_text(text: str) -> str:
 
 # --------------------------- yt-dlp (cookies optional) ---------------------------
 
-def probe_info(url: str, cookiefile: Optional[Path]) -> Dict:
-    ydl_opts = {"quiet": True, "noprogress": True, "skip_download": True}
-    if cookiefile:
-        ydl_opts["cookiefile"] = str(cookiefile)
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-    if not info or "id" not in info:
-        raise RuntimeError(f"Cannot extract info: {url}")
-    return {"id": info["id"], "title": info.get("title", info["id"])}
-
 def find_downloaded(video_id: str) -> Optional[Path]:
     m = list(DIR_DOWN.glob(f"{video_id}_*.wav"))
     return m[0] if m else None
 
 def download_to_wav(url: str, cookiefile: Optional[Path]) -> Path:
-    meta = probe_info(url, cookiefile=cookiefile)
-    exist = find_downloaded(meta["id"])
+    video_id = url.split("v=")[-1].split("&")[0]
+    exist = find_downloaded(video_id)
     if exist:
         print(f"[download] exists -> {exist.name}")
         return exist
@@ -140,13 +130,13 @@ def download_to_wav(url: str, cookiefile: Optional[Path]) -> Path:
         ydl_opts["cookiefile"] = str(cookiefile)
         print(f"[cookies] using -> {cookiefile}")
 
-    print(f"[download] {meta['id']} -> downloading")
+    print(f"[download] {video_id} -> downloading")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.extract_info(url, download=True)
 
-    out = find_downloaded(meta["id"])
+    out = find_downloaded(video_id)
     if not out:
-        raise FileNotFoundError(f"Downloaded WAV not found for {meta['id']}")
+        raise FileNotFoundError(f"Downloaded WAV not found for {video_id}")
     return out
 
 
@@ -327,9 +317,9 @@ def compute_summary(total_links: int) -> Dict:
 
 def main():
     ap = argparse.ArgumentParser(description="YT -> WAV -> faster-whisper -> passthrough align -> split per video -> summary-from-CSV")
-    ap.add_argument("--urls_file", type=str, default="links.txt", required=True, help="txt with one YouTube URL per line")
+    ap.add_argument("--links", type=str, default="links.txt", help="txt with one YouTube URL per line")
     ap.add_argument("--cookies", type=str, default=None, help="Path to cookies.txt (Netscape format)")
-    ap.add_argument("--model", type=str, default="medium", help="faster-whisper model (fallback: large-v3)")
+    ap.add_argument("--model", type=str, default="turbo", help="faster-whisper model (fallback: large-v3)")
     args = ap.parse_args()
 
     # cookies
@@ -339,7 +329,7 @@ def main():
         if not cookiefile.exists():
             raise FileNotFoundError(f"cookies file not found: {cookiefile}")
 
-    urls = read_urls(Path(args.urls_file))
+    urls = read_urls(Path(args.links))
     if not urls:
         print("No URLs found.")
         return
