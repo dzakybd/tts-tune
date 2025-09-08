@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-YouTube -> WAV (24k mono) -> faster-whisper (segments only)
--> Alignment = pass-through (romanize Arabic text only)
--> Split/export per-video folder + [video_id]_transcripts.txt (filename,duration,transcript)
--> Summary computed from all transcript CSVs (no audio decode)
-
-Output under ./output:
-- output/downloaded/[id]_[title].wav
-- output/transcription/[id]_[title].json
-- output/alignment/[id]_[title].json           (same segments, Arabic romanized)
-- output/splitted/[id]_[title]/[id]_[NNNN].wav
-- output/splitted/[id]_[title]/[id]_transcripts.txt  (CSV: filename,duration,transcript)
-- output/summary.json
-"""
-
 import re
 import csv
 import json
@@ -24,7 +7,7 @@ from typing import List, Dict, Optional
 
 import yt_dlp
 from pydub import AudioSegment
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel, BatchedInferencePipeline
 
 
 # --------------------------- paths ---------------------------
@@ -147,22 +130,22 @@ DEVICE = "cuda"
 COMPUTE_TYPE = "float16"
 LANGUAGE = "id"
 
-def load_fw(model_name: str) -> WhisperModel:
+def load_fw(model_name: str):
     """GPU-only (no CPU fallback)."""
-    print(f"[fw] loading -> {model_name} (device={DEVICE}, compute_type={COMPUTE_TYPE})")
-    return WhisperModel(model_name, device=DEVICE, compute_type=COMPUTE_TYPE)
+    print(f"[loading] {model_name} (device={DEVICE}, compute_type={COMPUTE_TYPE})")
+    model = WhisperModel(model_name, device=DEVICE, compute_type=COMPUTE_TYPE)
+    batched_model = BatchedInferencePipeline(model=model)
+    return batched_model
 
-def transcribe(model: WhisperModel, wav_path: Path) -> Dict:
+def transcribe(model, wav_path: Path) -> Dict:
     """
     Segments only (no word timestamps). We rely on Whisper's segmenting.
     """
     print(f"[asr] {wav_path.name}")
     seg_iter, info = model.transcribe(
         str(wav_path),
-        language=LANGUAGE,           # fixed 'id'
-        vad_filter=True,
-        word_timestamps=False,       # segments only
-        condition_on_previous_text=True,
+        language=LANGUAGE,
+        batch_size=16
     )
     segments = []
     for s in seg_iter:
