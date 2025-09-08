@@ -433,8 +433,15 @@ def main():
         import pandas as pd
         df = pd.read_csv(metadata_path)
         df = df[["filepath", "transcript"]]
+        df["filepath"] = df["filepath"].apply(
+            lambda audio_file: Path(audio_file)
+            if Path(audio_file).is_absolute()
+            else dataset_root / audio_file
+        )
+
         df.columns = ["audio", "text"]
         all_files = df.to_dict("records")
+
     if not all_files: raise ValueError("No data files found from local paths. Check metadata_file.")
     np.random.shuffle(all_files)
     train_hf_dataset = all_files # type: ignore

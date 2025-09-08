@@ -20,3 +20,4 @@ omegaconf==2.3.0
 conformer==0.3.2
 safetensors==0.5.3
 datasets
+tensorboard

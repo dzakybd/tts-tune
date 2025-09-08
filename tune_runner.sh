@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-python finetune_t3.py \
+python3 finetune_t3.py \
 --output_dir ./checkpoints/chatterbox_finetuned \
 --model_name_or_path ResembleAI/chatterbox \
 --metadata_file output/metadata.csv \
