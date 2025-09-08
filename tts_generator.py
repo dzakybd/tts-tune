@@ -334,7 +334,7 @@ def main():
     for wav_path in sorted(DIR_DOWN.glob("*.wav")):
         is_included = False
         for id_ in video_ids:
-            if id_ in wav_path:
+            if id_ in wav_path.stem:
                 is_included = True
                 break
 
@@ -361,7 +361,7 @@ def main():
 
         is_included = False
         for id_ in video_ids:
-            if id_ in trans_json:
+            if id_ in trans_json.stem:
                 is_included = True
                 break
 
@@ -388,7 +388,7 @@ def main():
 
         is_included = False
         for id_ in video_ids:
-            if id_ in wav_path:
+            if id_ in wav_path.stem:
                 is_included = True
                 break
 
