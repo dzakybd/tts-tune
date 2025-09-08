@@ -93,7 +93,7 @@ def download_to_wav(url: str, cookiefile: Optional[Path]) -> Path:
     exist = find_downloaded(video_id)
     if exist:
         print(f"[download] exists -> {exist.name}")
-        return exist
+        return video_id
 
     outtmpl = str((DIR_DOWN / "%(id)s_%(title)s.%(ext)s").as_posix())
     ydl_opts = {
@@ -120,7 +120,7 @@ def download_to_wav(url: str, cookiefile: Optional[Path]) -> Path:
     out = find_downloaded(video_id)
     if not out:
         raise FileNotFoundError(f"Downloaded WAV not found for {video_id}")
-    return out
+    return video_id
 
 
 # --------------------------- faster-whisper ---------------------------
@@ -319,9 +319,11 @@ def main():
 
     # STAGE 1: DOWNLOAD
     print("\n========== STAGE 1: DOWNLOAD ==========")
+    video_ids = []
     for u in urls:
         try:
-            download_to_wav(u, cookiefile=cookiefile)
+            video_id = download_to_wav(u, cookiefile=cookiefile)
+            video_ids.append(video_id)
         except Exception as e:
             print(f"[download][error] {u} -> {e}")
 
@@ -330,6 +332,15 @@ def main():
     model = load_fw(args.model)
 
     for wav_path in sorted(DIR_DOWN.glob("*.wav")):
+        is_included = False
+        for id_ in video_ids:
+            if id_ in wav_path:
+                is_included = True
+                break
+
+        if not is_included:
+            continue
+
         base = wav_path.stem
         json_path = DIR_TRANS / f"{base}.json"
         if json_path.exists():
@@ -346,6 +357,17 @@ def main():
     # STAGE 3: ALIGN (pass-through + romanize)
     print("\n========== STAGE 3: ALIGN ==========")
     for trans_json in sorted(DIR_TRANS.glob("*.json")):
+
+
+        is_included = False
+        for id_ in video_ids:
+            if id_ in trans_json:
+                is_included = True
+                break
+
+        if not is_included:
+            continue
+
         base = trans_json.stem
         out_json = DIR_ALIGN / f"{base}.json"
         if out_json.exists():
@@ -363,6 +385,16 @@ def main():
     # STAGE 4: SPLIT (export per video folder + transcripts CSV)
     print("\n========== STAGE 4: SPLIT ==========")
     for wav_path in sorted(DIR_DOWN.glob("*.wav")):
+
+        is_included = False
+        for id_ in video_ids:
+            if id_ in wav_path:
+                is_included = True
+                break
+
+        if not is_included:
+            continue
+
         base = wav_path.stem
         aligned_json = DIR_ALIGN / f"{base}.json"
         if not aligned_json.exists():
