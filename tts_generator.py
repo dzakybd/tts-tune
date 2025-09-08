@@ -43,7 +43,6 @@ def base_and_id(stem: str):
 
 # --------------------------- romanization (Arabic → Latin) ---------------------------
 
-# Include Arabic + Supplement + Extended-A + Presentation Forms A/B
 ARABIC_REGEX = re.compile(
     r'['
     r'\u0600-\u06FF'  # Arabic
@@ -125,22 +124,17 @@ def download_to_wav(url: str, cookiefile: Optional[Path]) -> Path:
 
 # --------------------------- faster-whisper ---------------------------
 
-# GPU-only defaults per your request:
 DEVICE = "cuda"
 COMPUTE_TYPE = "float16"
 LANGUAGE = "id"
 
 def load_fw(model_name: str):
-    """GPU-only (no CPU fallback)."""
     print(f"[loading] {model_name} (device={DEVICE}, compute_type={COMPUTE_TYPE})")
     model = WhisperModel(model_name, device=DEVICE, compute_type=COMPUTE_TYPE)
     batched_model = BatchedInferencePipeline(model=model)
     return batched_model
 
 def transcribe(model, wav_path: Path) -> Dict:
-    """
-    Segments only (no word timestamps). We rely on Whisper's segmenting.
-    """
     print(f"[asr] {wav_path.name}")
     seg_iter, info = model.transcribe(
         str(wav_path),
