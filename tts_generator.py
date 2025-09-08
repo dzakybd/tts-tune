@@ -289,6 +289,70 @@ def compute_summary(total_links: int) -> Dict:
     )
     return summary
 
+# --------------------------- metadata aggregator (from *_transcripts.txt) ---------------------------
+
+def build_metadata_csv() -> int:
+    """
+    Create output/metadata.csv (sibling of summary.json) that aggregates:
+      filepath,duration,transcript
+    from all output/splitted/**/_transcripts.txt files.
+
+    filepath uses a BASE_DIR-relative path starting with 'splitted/.../xxx.wav'
+    """
+    csv_files = list(DIR_SPLIT.glob("**/*_transcripts.txt"))
+    out_path = BASE_DIR / "metadata.csv"
+
+    total_rows = 0
+    with open(out_path, "w", encoding="utf-8", newline="") as fout:
+        writer = csv.writer(fout)
+        writer.writerow(["filepath", "duration", "transcript"])
+
+        for txt in csv_files:
+            # directory under output/splitted that holds the chunks
+            rel_dir = txt.parent.relative_to(DIR_SPLIT)  # e.g. "_HaMfx73vVI_..._Bagian_3"
+            try:
+                with open(txt, "r", encoding="utf-8") as fin:
+                    reader = csv.reader(fin)
+                    header = next(reader, None)
+
+                    # columns: filename,duration,transcript (tolerate variant order)
+                    name_idx, dur_idx, txt_idx = 0, 1, 2
+                    if header:
+                        norm = [h.strip().lower() for h in header]
+                        try:
+                            name_idx = norm.index("filename")
+                        except ValueError:
+                            name_idx = 0
+                        try:
+                            dur_idx = norm.index("duration")
+                        except ValueError:
+                            dur_idx = 1
+                        try:
+                            txt_idx = norm.index("transcript")
+                        except ValueError:
+                            txt_idx = 2
+
+                    for row in reader:
+                        if not row or len(row) <= max(name_idx, dur_idx, txt_idx):
+                            continue
+                        fname = row[name_idx].strip()
+                        # Construct BASE_DIR-relative path starting with 'splitted/...'
+                        rel_filepath = Path("splitted") / rel_dir / fname
+                        # Keep duration as provided (normalize to float with 3 decimals if possible)
+                        dur_raw = row[dur_idx].strip()
+                        try:
+                            dur_val = f"{float(dur_raw):.3f}"
+                        except Exception:
+                            dur_val = dur_raw
+                        transcript = row[txt_idx]
+                        writer.writerow([rel_filepath.as_posix(), dur_val, transcript])
+                        total_rows += 1
+            except Exception as e:
+                print(f"[metadata][warn] skip {txt} -> {e}")
+
+    print(f"[metadata] wrote -> {out_path.name} with {total_rows} rows")
+    return total_rows
+
 
 # --------------------------- main ---------------------------
 
@@ -400,6 +464,10 @@ def main():
             export_per_video(wav_path, aligned)
         except Exception as e:
             print(f"[split][error] {base} -> {e}")
+
+    # METADATA (aggregate after split)
+    print("\n========== METADATA ==========")
+    build_metadata_csv()
 
     # SUMMARY (from CSVs)
     print("\n========== SUMMARY ==========")
