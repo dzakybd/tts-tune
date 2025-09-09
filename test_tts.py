@@ -12,7 +12,8 @@ else:
 
 print(f"Using device: {device}")
 
-model = ChatterboxTTS.from_pretrained(device=device)
+model = ChatterboxTTS.from_local(ckpt_dir="checkpoints/chatterbox_finetuned", device=device)
+# model = ChatterboxTTS.from_pretrained(device=device)
 
 AUDIO_PROMPT_PATH = "ono.wav"
 text = "Halo apa kabar? saya ono, senang berkenalan denganmu."
