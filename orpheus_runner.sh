@@ -1,0 +1,1 @@
+nohup python3 orpheus.py > "orpheus.log" 2>&1 & echo $! > "orpheus.pid"

@@ -1,0 +1,6 @@
+unsloth
+snac
+transformers[torch]==4.55.4
+librosa
+soundfile
+torchaudio
